@@ -10,13 +10,7 @@ const checkAvailability = async (listingId, checkIn, checkOut) => {
     checkOut: { $gt: new Date(checkIn) },
   });
 
-  console.log("Availability check:", {
-    listingId,
-    checkIn,
-    checkOut,
-    existingBooking,
-  });
-
+  
   return !existingBooking;
 };
 
