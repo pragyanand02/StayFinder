@@ -27,8 +27,8 @@ const registerValidation = [
   check("lastName", "Last name is required").not().isEmpty(),
   check("role").optional().isIn(["user", "host"]).withMessage("Invalid role"),
   check("phoneNumber")
-    .optional()
-    .isMobilePhone()
+    .optional({ checkFalsy: true })
+    .isMobilePhone("en-IN")
     .withMessage("Invalid phone number"),
 ];
 
