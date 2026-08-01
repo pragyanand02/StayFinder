@@ -1,0 +1,42 @@
+import axios from "axios";
+
+const baseURL =
+  import.meta.env.VITE_API_URL || "http://localhost:5001/api";
+if (import.meta.env.DEV) {
+  console.log("API Base URL:", baseURL);
+  console.log("Environment:", import.meta.env.MODE);
+}
+
+const api = axios.create({
+  baseURL,
+  withCredentials: true,
+});
+
+// Add token to requests if available
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
