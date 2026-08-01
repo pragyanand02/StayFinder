@@ -45,6 +45,7 @@ const allowedOrigins = [
   "http://127.0.0.1:5173", // Alternative Vite dev server
   "http://localhost:5000", // Local backend for development
   "http://localhost:5001", // Local backend for development (new port)
+  "https://stay-finder-frontend-nine.vercel.app",
 ];
 
 // Add environment variable origins if they exist
