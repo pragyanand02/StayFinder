@@ -4,19 +4,11 @@ const Listing = require("../models/Listing");
 // Helper function to check listing availability
 const checkAvailability = async (listingId, checkIn, checkOut) => {
   const existingBooking = await Booking.findOne({
-    listing: listingId,
-    status: { $in: ["confirmed", "pending"] },
-    $or: [
-      {
-        checkIn: { $lte: new Date(checkIn) },
-        checkOut: { $gte: new Date(checkIn) },
-      },
-      {
-        checkIn: { $lte: new Date(checkOut) },
-        checkOut: { $gte: new Date(checkOut) },
-      },
-    ],
-  });
+  listing: listingId,
+  status: { $in: ["confirmed", "pending"] },
+  checkIn: { $lt: new Date(checkOut) },
+  checkOut: { $gt: new Date(checkIn) },
+});
   return !existingBooking;
 };
 
@@ -109,7 +101,7 @@ const deleteBookingService = async (user, bookingId) => {
   if (!booking) throw new Error("Booking not found");
   const listing = await Listing.findById(booking.listing);
   if (!listing) throw new Error("Listing not found");
-  if (listing.host.toString() !== user.id)
+  if (listing.host.toString() !== user._id.toString())
     throw new Error("Not authorized to delete this booking");
   if (booking.status === "confirmed") {
     await Listing.findByIdAndUpdate(booking.listing, {
