@@ -4,11 +4,19 @@ const Listing = require("../models/Listing");
 // Helper function to check listing availability
 const checkAvailability = async (listingId, checkIn, checkOut) => {
   const existingBooking = await Booking.findOne({
-  listing: listingId,
-  status: { $in: ["confirmed", "pending"] },
-  checkIn: { $lt: new Date(checkOut) },
-  checkOut: { $gt: new Date(checkIn) },
-});
+    listing: listingId,
+    status: { $in: ["confirmed", "pending"] },
+    checkIn: { $lt: new Date(checkOut) },
+    checkOut: { $gt: new Date(checkIn) },
+  });
+
+  console.log("Availability check:", {
+    listingId,
+    checkIn,
+    checkOut,
+    existingBooking,
+  });
+
   return !existingBooking;
 };
 
