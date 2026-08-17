@@ -63,12 +63,16 @@ const ListingDetailPage = () => {
       // Create payment order
       const orderResponse = await api.post("/payments/create-order", {
         bookingId,
+        amount: totalPrice,
       });
+
+      const orderId = orderResponse.data.orderId || orderResponse.data.order?.id;
+      const keyId = orderResponse.data.keyId || "rzp_test_mockkey";
 
       // Initiate Razorpay payment
       await initiateRazorpayPayment({
-        keyId: orderResponse.data.keyId,
-        orderId: orderResponse.data.orderId,
+        keyId: keyId,
+        orderId: orderId,
         amount: totalPrice,
         currency: "INR",
         customerName: "Guest User",
@@ -78,25 +82,29 @@ const ListingDetailPage = () => {
           try {
             // Verify payment
             await api.post("/payments/verify", {
-              orderId: orderResponse.data.orderId,
+              bookingId: bookingId,
+              orderId: orderId,
               paymentId: paymentData.razorpay_payment_id,
               signature: paymentData.razorpay_signature,
+              razorpay_order_id: orderId,
+              razorpay_payment_id: paymentData.razorpay_payment_id,
+              razorpay_signature: paymentData.razorpay_signature,
             });
 
             setPaymentLoading(false);
             alert("Payment successful! Your booking is confirmed.");
             setTimeout(() => {
               navigate("/bookings");
-            }, 2000);
+            }, 1000);
           } catch (err) {
             setPaymentError(
-              "Payment verification failed. Please contact support."
+              err.response?.data?.message || "Payment verification failed. Please contact support."
             );
             setPaymentLoading(false);
           }
         },
-        onError: (error) => {
-          setPaymentError(error);
+        onError: (errorMsg) => {
+          setPaymentError(errorMsg || "Payment could not be completed.");
           setPaymentLoading(false);
         },
       });
@@ -121,9 +129,9 @@ const ListingDetailPage = () => {
     const nights = calculateNights();
     if (!nights || !listing) return 0;
 
-    const basePrice = nights * listing.price.base;
-    const cleaningFee = listing.price.cleaningFee || 0;
-    const serviceFee = listing.price.serviceFee || 0;
+    const basePrice = nights * (listing.price?.base || 0);
+    const cleaningFee = listing.price?.cleaningFee || 0;
+    const serviceFee = listing.price?.serviceFee || 0;
 
     return basePrice + cleaningFee + serviceFee;
   };
@@ -211,7 +219,7 @@ const ListingDetailPage = () => {
                 />
               </svg>
               <span>
-                {listing.location.city}, {listing.location.country}
+                {listing.location?.city}, {listing.location?.country}
               </span>
             </div>
           </div>
@@ -383,7 +391,7 @@ const ListingDetailPage = () => {
             )}
 
             {/* Carbon Footprint */}
-            {listing.carbonFootprint && listing.carbonFootprint.value > 0 && (
+            {listing.carbonFootprint && (listing.carbonFootprint.value > 0 || listing.carbonFootprint.perNight > 0) && (
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-md p-6 border border-green-200">
                 <div className="flex items-center mb-4">
                   <svg
@@ -403,15 +411,15 @@ const ListingDetailPage = () => {
                       Total Emissions
                     </div>
                     <div className="text-2xl font-bold text-green-600">
-                      {listing.carbonFootprint.value}{" "}
-                      {listing.carbonFootprint.unit}
+                      {listing.carbonFootprint.value || listing.carbonFootprint.perNight || 5}{" "}
+                      {listing.carbonFootprint.unit || "kg CO2e"}
                     </div>
                   </div>
                   <div className="bg-white rounded-lg p-4">
                     <div className="text-sm text-gray-600 mb-1">Per Night</div>
                     <div className="text-2xl font-bold text-green-600">
-                      {listing.carbonFootprint.perNight}{" "}
-                      {listing.carbonFootprint.unit}
+                      {listing.carbonFootprint.perNight || listing.carbonFootprint.value || 5}{" "}
+                      {listing.carbonFootprint.unit || "kg CO2e/night"}
                     </div>
                   </div>
                 </div>
@@ -430,7 +438,7 @@ const ListingDetailPage = () => {
               <div className="mb-6">
                 <div className="flex items-baseline">
                   <span className="text-3xl font-bold text-gray-900">
-                    ${listing.price.base}
+                    ${listing.price?.base}
                   </span>
                   <span className="text-gray-600 ml-1">/ night</span>
                 </div>
@@ -494,7 +502,7 @@ const ListingDetailPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {Array.from(
-                      { length: listing.maxGuests },
+                      { length: listing.maxGuests || 1 },
                       (_, i) => i + 1
                     ).map((num) => (
                       <option key={num} value={num}>
@@ -508,17 +516,17 @@ const ListingDetailPage = () => {
                   <div className="border-t pt-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>
-                        ${listing.price.base} x {calculateNights()} nights
+                        ${listing.price?.base} x {calculateNights()} nights
                       </span>
-                      <span>${listing.price.base * calculateNights()}</span>
+                      <span>${(listing.price?.base || 0) * calculateNights()}</span>
                     </div>
-                    {listing.price.cleaningFee > 0 && (
+                    {listing.price?.cleaningFee > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Cleaning fee</span>
                         <span>${listing.price.cleaningFee}</span>
                       </div>
                     )}
-                    {listing.price.serviceFee > 0 && (
+                    {listing.price?.serviceFee > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Service fee</span>
                         <span>${listing.price.serviceFee}</span>

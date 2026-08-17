@@ -10,25 +10,22 @@ const CreateListingPage = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    // Location fields (backend requires nested fields)
     locationAddress: "",
     locationCity: "",
     locationState: "",
     locationCountry: "",
     lat: "",
     lng: "",
-    // Price fields (backend requires nested fields)
     priceBase: "",
     currency: "USD",
     cleaningFee: "",
     serviceFee: "",
-    // Property meta
     propertyType: "house",
     roomType: "entire",
-    maxGuests: "",
-    bedrooms: "",
-    beds: "",
-    bathrooms: "",
+    maxGuests: "2",
+    bedrooms: "1",
+    beds: "1",
+    bathrooms: "1",
     amenities: [],
   });
 
@@ -66,40 +63,23 @@ const CreateListingPage = () => {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     setLoading(true);
     setError(null);
-    
-    // Limit to 2 files at a time to prevent payload issues
-    const selectedFiles = files.slice(0, 2);
-    
-    // Check file sizes
-    const maxSizeInBytes = 200 * 1024; // 200KB
-    const oversizedFiles = selectedFiles.filter(file => file.size > maxSizeInBytes);
-    
-    if (oversizedFiles.length > 0) {
-      setError("Images exceeding 200KB will be compressed");
-    }
-    
-    const uploadPromises = selectedFiles.map(file => {
-      return new Promise((resolve, reject) => {
+
+    const uploadPromises = files.map((file) => {
+      return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (event) => {
-          // Create an image element to get dimensions
           const img = new Image();
           img.onload = () => {
-            // Create canvas for resizing
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Set maximum dimensions - smaller to reduce payload size
-            const maxWidth = 300;
-            const maxHeight = 200;
-            
-            // Calculate new dimensions while maintaining aspect ratio
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            const maxWidth = 800;
+            const maxHeight = 600;
             let width = img.width;
             let height = img.height;
-            
+
             if (width > height) {
               if (width > maxWidth) {
                 height *= maxWidth / width;
@@ -111,78 +91,71 @@ const CreateListingPage = () => {
                 height = maxHeight;
               }
             }
-            
+
             canvas.width = width;
             canvas.height = height;
-            
-            // Draw and compress image
             ctx.drawImage(img, 0, 0, width, height);
-            
-            // Get compressed data URL (JPEG at 10% quality for much smaller size)
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.1);
-            
-            // Just store the data URL directly
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
             resolve(compressedDataUrl);
           };
-          img.onerror = () => reject("Failed to load image");
+          img.onerror = () => resolve(event.target.result);
           img.src = event.target.result;
         };
-        reader.onerror = (error) => reject(error);
+        reader.onerror = () => resolve(null);
         reader.readAsDataURL(file);
       });
     });
 
     Promise.all(uploadPromises)
-      .then(newImages => {
-        // Filter out any rejected promises
-        const validImages = newImages.filter(img => img);
+      .then((newImages) => {
+        const validImages = newImages.filter(Boolean);
         if (validImages.length > 0) {
-          setUploadedImages(prev => [...prev, ...validImages]);
+          setUploadedImages((prev) => [...prev, ...validImages]);
         }
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Upload error:", err);
-        if (!error) {
-          setError("Failed to process image uploads");
-        }
         setLoading(false);
       });
   };
 
   const removeImage = (index) => {
-    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-    // Upload image to Cloudinary
+  // Upload image to Cloudinary if configured, otherwise pass base64 directly
   const uploadImageToCloudinary = async (base64Image) => {
     try {
-     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-      const formData = new FormData();
-      formData.append('file', base64Image);
-      formData.append('upload_preset', uploadPreset);
+      const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+      if (!cloudName || !uploadPreset) {
+        // Return base64 directly; backend cloudinary service will process it
+        return base64Image;
+      }
+
+      const uploadData = new FormData();
+      uploadData.append("file", base64Image);
+      uploadData.append("upload_preset", uploadPreset);
 
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${cloudName}/upload`,
         {
-          method: 'POST',
-          body: formData,
+          method: "POST",
+          body: uploadData,
         }
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Cloudinary upload error:', error);
-        throw new Error(error.message || 'Failed to upload image to Cloudinary');
+        return base64Image;
       }
 
       const data = await response.json();
-      console.log('Image uploaded successfully:', data.secure_url);
-      return data.secure_url;
+      return data.secure_url || base64Image;
     } catch (error) {
-      console.error('Error in uploadImageToCloudinary:', error);
-      throw new Error('Failed to upload image. Please try again.');
+      console.warn("Cloudinary direct upload skipped, using backend upload fallback:", error);
+      return base64Image;
     }
   };
 
@@ -198,13 +171,11 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
         return;
       }
 
-      // Upload images to Cloudinary first
-      const imageUploadPromises = uploadedImages.map(async (base64Image) => {
-        return await uploadImageToCloudinary(base64Image);
-      });
-      
+      const imageUploadPromises = uploadedImages.map((img) =>
+        uploadImageToCloudinary(img)
+      );
       const imageUrls = await Promise.all(imageUploadPromises);
-      
+
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -214,8 +185,8 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
           state: formData.locationState,
           country: formData.locationCountry,
           coordinates: {
-            lat: Number(formData.lat),
-            lng: Number(formData.lng),
+            lat: Number(formData.lat) || 25.7617,
+            lng: Number(formData.lng) || -80.1918,
           },
         },
         price: {
@@ -228,19 +199,22 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
         amenities: formData.amenities,
         propertyType: formData.propertyType,
         roomType: formData.roomType,
-        maxGuests: Number(formData.maxGuests),
-        bedrooms: Number(formData.bedrooms),
-        beds: Number(formData.beds),
-        bathrooms: Number(formData.bathrooms),
+        maxGuests: Number(formData.maxGuests) || 1,
+        bedrooms: Number(formData.bedrooms) || 1,
+        beds: Number(formData.beds) || 1,
+        bathrooms: Number(formData.bathrooms) || 1,
       };
 
-      console.log('Sending payload to server:', JSON.stringify(payload, null, 2));
-      const response = await api.post("/listings", payload);
-      console.log('Server response:', response.data);
+      await api.post("/listings", payload);
       navigate("/host/dashboard");
     } catch (err) {
-      console.error('Error in form submission:', err);
-      setError(err.response?.data?.message || err.message || "Failed to create listing");
+      console.error("Error in form submission:", err);
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.errors?.[0]?.msg ||
+          err.message ||
+          "Failed to create listing"
+      );
     } finally {
       setLoading(false);
     }
@@ -328,36 +302,6 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Latitude
-            </label>
-            <input
-              type="number"
-              name="lat"
-              value={formData.lat}
-              onChange={handleInputChange}
-              required
-              step="any"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Longitude
-            </label>
-            <input
-              type="number"
-              name="lng"
-              value={formData.lng}
-              onChange={handleInputChange}
-              required
-              step="any"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
               Price per night
             </label>
             <input
@@ -382,9 +326,9 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="USD">USD</option>
-              <option value="INR">INR</option>
-              <option value="EUR">EUR</option>
+              <option value="USD">USD ($)</option>
+              <option value="INR">INR (₹)</option>
+              <option value="EUR">EUR (€)</option>
             </select>
           </div>
 
@@ -417,6 +361,7 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Property type
@@ -534,10 +479,7 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {amenityOptions.map((amenity) => (
-              <label
-                key={amenity}
-                className="inline-flex items-center space-x-2"
-              >
+              <label key={amenity} className="inline-flex items-center space-x-2">
                 <input
                   type="checkbox"
                   checked={formData.amenities.includes(amenity)}
@@ -556,9 +498,25 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
           </label>
           <div className="flex items-center">
             <label className="flex items-center px-4 py-2 bg-white text-blue-600 rounded-md border border-blue-600 cursor-pointer hover:bg-blue-50">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11v5m4-5v5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 11v5m4-5v5"
+                />
               </svg>
               Choose Images
               <input
@@ -569,19 +527,23 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
                 className="hidden"
               />
             </label>
-            <span className="ml-3 text-sm text-gray-500">Upload property images (JPG, PNG)</span>
+            <span className="ml-3 text-sm text-gray-500">
+              Upload property images (JPG, PNG)
+            </span>
           </div>
-          
+
           {/* Image preview section */}
           {uploadedImages.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-gray-700 mb-2">Uploaded Images ({uploadedImages.length})</p>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Uploaded Images ({uploadedImages.length})
+              </p>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {uploadedImages.map((image, index) => (
                   <div key={index} className="relative group">
-                    <img 
-                      src={image} 
-                      alt={`Property image ${index + 1}`} 
+                    <img
+                      src={image}
+                      alt={`Property image ${index + 1}`}
                       className="w-full h-32 object-cover rounded-md"
                     />
                     <button
@@ -589,8 +551,19 @@ const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
                       onClick={() => removeImage(index)}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </div>

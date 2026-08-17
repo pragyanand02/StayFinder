@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import LoadingSpinner from "../components/LoadingSpinner";
 
-console.log("Rendering HostDashboard");
-
 const HostDashboard = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -31,19 +29,25 @@ const HostDashboard = () => {
 
       // Load host listings
       const listingsResponse = await api.get("/listings/host/my-listings");
-      setListings(listingsResponse.data);
+      const hostListings = Array.isArray(listingsResponse.data) ? listingsResponse.data : [];
+      setListings(hostListings);
 
       // Load host bookings for stats and table
-      const bookingsResponse = await api.get("/bookings/host/bookings");
-      const bookings = bookingsResponse.data;
-      setHostBookings(bookings);
+      let bookings = [];
+      try {
+        const bookingsResponse = await api.get("/bookings/host/bookings");
+        bookings = Array.isArray(bookingsResponse.data) ? bookingsResponse.data : [];
+        setHostBookings(bookings);
+      } catch (bErr) {
+        console.warn("Could not load host bookings:", bErr);
+      }
 
       // Calculate stats
       const totalRevenue = bookings.reduce((sum, booking) => {
         return sum + (booking.totalPrice || 0);
       }, 0);
 
-      const ratings = listingsResponse.data
+      const ratings = hostListings
         .filter((listing) => listing.averageRating > 0)
         .map((listing) => listing.averageRating);
       const averageRating =
@@ -52,13 +56,13 @@ const HostDashboard = () => {
           : 0;
 
       setStats({
-        totalListings: listingsResponse.data.length,
+        totalListings: hostListings.length,
         totalBookings: bookings.length,
         totalRevenue,
         averageRating,
       });
     } catch (err) {
-      setError("Failed to load host data");
+      setError(err.response?.data?.message || "Failed to load host data");
       console.error("Error loading host data:", err);
     } finally {
       setLoading(false);
@@ -76,10 +80,10 @@ const HostDashboard = () => {
       // Update stats
       setStats((prev) => ({
         ...prev,
-        totalListings: prev.totalListings - 1,
+        totalListings: Math.max(0, prev.totalListings - 1),
       }));
     } catch (err) {
-      alert("Failed to delete listing");
+      alert(err.response?.data?.message || "Failed to delete listing");
     }
   };
 
@@ -253,39 +257,46 @@ const HostDashboard = () => {
             <div className="text-gray-500">You have no listings yet.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((listing) => (
-                <div
-                  key={listing._id}
-                  className="bg-white rounded-lg shadow p-4 flex flex-col"
-                >
-                  <img
-                    src={listing.images?.[0] || "/placeholder.jpg"}
-                    alt={listing.title}
-                    className="w-full h-40 object-cover rounded mb-3"
-                  />
-                  <h3 className="text-lg font-semibold mb-1">
-                    {listing.title}
-                  </h3>
-                  <p className="text-gray-600 mb-2 line-clamp-2">
-                    {listing.description}
-                  </p>
-                  <div className="flex-1" />
-                  <div className="flex space-x-2 mt-3">
-                    <button
-                      onClick={() => handleEditListing(listing._id)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-medium transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteListing(listing._id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition"
-                    >
-                      Delete
-                    </button>
+              {listings.map((listing) => {
+                const imgUrl = listing.images?.[0]?.url || listing.images?.[0] || "/images/no-image-placeholder.jpg";
+                return (
+                  <div
+                    key={listing._id}
+                    className="bg-white rounded-lg shadow p-4 flex flex-col"
+                  >
+                    <img
+                      src={imgUrl}
+                      alt={listing.title}
+                      className="w-full h-40 object-cover rounded mb-3"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "/images/no-image-placeholder.jpg";
+                      }}
+                    />
+                    <h3 className="text-lg font-semibold mb-1">
+                      {listing.title}
+                    </h3>
+                    <p className="text-gray-600 mb-2 line-clamp-2">
+                      {listing.description}
+                    </p>
+                    <div className="flex-1" />
+                    <div className="flex space-x-2 mt-3">
+                      <button
+                        onClick={() => handleEditListing(listing._id)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-medium transition"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteListing(listing._id)}
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -348,7 +359,7 @@ const HostDashboard = () => {
                   {hostBookings.map((booking) => (
                     <tr key={booking._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {booking.listing?.title}
+                        {booking.listing?.title || "Property"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {booking.guest?.firstName} {booking.guest?.lastName}
@@ -360,7 +371,7 @@ const HostDashboard = () => {
                         {new Date(booking.checkOut).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {booking.status}
+                        <span className="capitalize">{booking.status}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         ${booking.totalPrice}

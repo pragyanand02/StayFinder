@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import axios from "axios";
+import api from "../../api";
 
 const ChatWindow = ({ onClose }) => {
   const [messages, setMessages] = useState([
@@ -27,10 +27,11 @@ const ChatWindow = ({ onClose }) => {
 
     if (!input.trim()) return;
 
+    const userText = input.trim();
     // Add user message
     const userMessage = {
       id: messages.length + 1,
-      text: input,
+      text: userText,
       sender: "user",
       timestamp: new Date(),
     };
@@ -40,15 +41,12 @@ const ChatWindow = ({ onClose }) => {
     setLoading(true);
 
     try {
-      // Send to backend
-      const response = await axios.post(
-        "http://localhost:5001/api/assistant",
-        { message: input }
-      );
+      // Send to backend via configured api client
+      const response = await api.post("/assistant", { message: userText });
 
       const botMessage = {
         id: messages.length + 2,
-        text: response.data.message,
+        text: response.data?.message || "I'm here to help with your StayFinder reservations!",
         sender: "bot",
         timestamp: new Date(),
       };
@@ -59,7 +57,9 @@ const ChatWindow = ({ onClose }) => {
 
       const errorMessage = {
         id: messages.length + 2,
-        text: "Sorry, I encountered an error. Please try again.",
+        text:
+          error.response?.data?.message ||
+          "Sorry, I encountered an issue connecting. You can explore listings or contact host directly.",
         sender: "bot",
         timestamp: new Date(),
       };
@@ -149,4 +149,3 @@ const ChatWindow = ({ onClose }) => {
 };
 
 export default ChatWindow;
-

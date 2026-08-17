@@ -1,5 +1,5 @@
 const express = require("express");
-const { check, body } = require("express-validator");
+const { body } = require("express-validator");
 const {
   createBooking,
   getUserBookings,
@@ -31,13 +31,13 @@ const statusValidation = [
     .withMessage("Invalid booking status"),
 ];
 
-// Guest routes
+// Guest & Host Specific routes (MUST be registered before /:id parameter)
 router.post("/", bookingValidation, createBooking);
 router.get("/my-bookings", getUserBookings);
-router.get("/:id", getBooking);
-
-// Host routes
 router.get("/host/bookings", authorize("host", "admin"), getHostBookings);
+
+// Parameterized routes
+router.get("/:id", getBooking);
 router.put(
   "/:id/status",
   authorize("host", "admin"),

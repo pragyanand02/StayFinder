@@ -13,8 +13,8 @@ const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Validation middleware
-const listingValidation = [
+// Validation middleware for creating listings
+const createListingValidation = [
   check("title", "Title is required").not().isEmpty(),
   check("description", "Description is required").not().isEmpty(),
   check("location.address", "Address is required").not().isEmpty(),
@@ -44,23 +44,30 @@ const listingValidation = [
   check("images", "At least one image is required").isArray({ min: 1 }),
 ];
 
+// Optional validation for updating listings
+const updateListingValidation = [
+  check("title").optional().not().isEmpty().withMessage("Title cannot be empty"),
+  check("description").optional().not().isEmpty().withMessage("Description cannot be empty"),
+  check("price.base").optional().isNumeric().withMessage("Base price must be a number"),
+];
+
 // Public routes
 router.get("/", getListings);
 router.get("/:id/host-contact", getHostContact);
-router.get("/:id", getListing);
 
-// Protected routes
-router.use(protect);
-
-// Host routes
-router.get("/host/my-listings", authorize("host", "admin"), getHostListings);
-router.post("/", authorize("host", "admin"), listingValidation, createListing);
+// Host routes (REGISTERED BEFORE /:id to prevent route shadowing)
+router.get("/host/my-listings", protect, authorize("host", "admin"), getHostListings);
+router.post("/", protect, authorize("host", "admin"), createListingValidation, createListing);
 router.put(
   "/:id",
+  protect,
   authorize("host", "admin"),
-  listingValidation,
+  updateListingValidation,
   updateListing
 );
-router.delete("/:id", authorize("host", "admin"), deleteListing);
+router.delete("/:id", protect, authorize("host", "admin"), deleteListing);
+
+// Public single listing route (Must be after specific host routes)
+router.get("/:id", getListing);
 
 module.exports = router;

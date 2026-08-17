@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../api";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { Link } from "react-router-dom";
-
-console.log("Fetching data for HostDashboard/BookingsPage");
 
 const BookingsPage = () => {
   const { user, isAuthenticated } = useAuth();
@@ -24,9 +21,10 @@ const BookingsPage = () => {
       setLoading(true);
       setError(null);
       const response = await api.get("/bookings/my-bookings");
-      setBookings(response.data);
+      const list = Array.isArray(response.data) ? response.data : [];
+      setBookings(list);
     } catch (err) {
-      setError("Failed to load bookings");
+      setError(err.response?.data?.message || "Failed to load bookings");
       console.error("Error loading bookings:", err);
     } finally {
       setLoading(false);
@@ -42,7 +40,7 @@ const BookingsPage = () => {
       await api.delete(`/bookings/${bookingId}`);
       setBookings(bookings.filter((booking) => booking._id !== bookingId));
     } catch (err) {
-      alert("Failed to cancel booking");
+      alert(err.response?.data?.message || "Failed to cancel booking");
     }
   };
 
@@ -78,6 +76,7 @@ const BookingsPage = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -184,148 +183,150 @@ const BookingsPage = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredBookings.map((booking) => (
-              <div
-                key={booking._id}
-                className="bg-white rounded-lg shadow overflow-hidden"
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-4">
-                        <img
-                          className="h-20 w-20 rounded-lg object-cover"
-                          src={
-                            booking.listing?.images?.[0] ||
-                            "https://via.placeholder.com/80x80?text=No+Image"
-                          }
-                          alt={booking.listing?.title}
-                        />
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {booking.listing?.title}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {booking.listing?.location?.city},{" "}
-                            {booking.listing?.location?.state}
-                          </p>
-                          <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center">
-                              <svg
-                                className="w-4 h-4 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                              {formatDate(booking.checkIn)} -{" "}
-                              {formatDate(booking.checkOut)}
-                            </div>
-                            <div className="flex items-center">
-                              <svg
-                                className="w-4 h-4 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                />
-                              </svg>
-                              {booking.guests}{" "}
-                              {booking.guests === 1 ? "guest" : "guests"}
+            {filteredBookings.map((booking) => {
+              const imgUrl =
+                booking.listing?.images?.[0]?.url ||
+                booking.listing?.images?.[0] ||
+                "/images/no-image-placeholder.jpg";
+
+              return (
+                <div
+                  key={booking._id}
+                  className="bg-white rounded-lg shadow overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <img
+                            className="h-20 w-20 rounded-lg object-cover"
+                            src={imgUrl}
+                            alt={booking.listing?.title || "Listing image"}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "/images/no-image-placeholder.jpg";
+                            }}
+                          />
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {booking.listing?.title || "Property"}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {booking.listing?.location?.city},{" "}
+                              {booking.listing?.location?.state}
+                            </p>
+                            <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                              <div className="flex items-center">
+                                <svg
+                                  className="w-4 h-4 mr-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                  />
+                                </svg>
+                                {formatDate(booking.checkIn)} -{" "}
+                                {formatDate(booking.checkOut)}
+                              </div>
+                              <div className="flex items-center">
+                                <svg
+                                  className="w-4 h-4 mr-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                  />
+                                </svg>
+                                {booking.guests}{" "}
+                                {booking.guests === 1 ? "guest" : "guests"}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
+
+                      <div className="text-right">
+                        <div className="mb-2">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${getStatusColor(
+                              booking.status
+                            )}`}
+                          >
+                            {booking.status}
+                          </span>
+                        </div>
+                        <div className="text-lg font-bold text-gray-900">
+                          ${booking.totalPrice?.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-500">Total</div>
+                      </div>
                     </div>
 
-                    <div className="text-right">
-                      <div className="mb-2">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                            booking.status
-                          )}`}
+                    {/* Booking Details */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-gray-900">
+                            Booking ID:
+                          </span>
+                          <span className="ml-2 text-gray-600">
+                            {booking._id.slice(-8)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-900">
+                            Booked on:
+                          </span>
+                          <span className="ml-2 text-gray-600">
+                            {formatDate(booking.createdAt)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-900">Host:</span>
+                          <span className="ml-2 text-gray-600">
+                            {booking.listing?.host?.firstName || "Host"}{" "}
+                            {booking.listing?.host?.lastName || ""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+                      <div className="flex space-x-3">
+                        {booking.listing?._id && (
+                          <Link
+                            to={`/listings/${booking.listing._id}`}
+                            className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                          >
+                            View Property
+                          </Link>
+                        )}
+                      </div>
+
+                      {canCancelBooking(booking) && (
+                        <button
+                          onClick={() => handleCancelBooking(booking._id)}
+                          className="text-red-600 hover:text-red-700 font-medium text-sm"
                         >
-                          {booking.status}
-                        </span>
-                      </div>
-                      <div className="text-lg font-bold text-gray-900">
-                        ${booking.totalPrice?.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-500">Total</div>
-                    </div>
-                  </div>
-
-                  {/* Booking Details */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-gray-900">
-                          Booking ID:
-                        </span>
-                        <span className="ml-2 text-gray-600">
-                          {booking._id.slice(-8)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-900">
-                          Booked on:
-                        </span>
-                        <span className="ml-2 text-gray-600">
-                          {formatDate(booking.createdAt)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-900">Host:</span>
-                        <span className="ml-2 text-gray-600">
-                          {booking.listing?.host?.firstName}{" "}
-                          {booking.listing?.host?.lastName}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <div className="flex space-x-3">
-                      <Link
-                        to={`/listings/${booking.listing?._id}`}
-                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                      >
-                        View Property
-                      </Link>
-                      {booking.status === "confirmed" && (
-                        <Link
-                          to={`/bookings/${booking._id}/details`}
-                          className="text-gray-600 hover:text-gray-700 font-medium text-sm"
-                        >
-                          View Details
-                        </Link>
+                          Cancel Booking
+                        </button>
                       )}
                     </div>
-
-                    {canCancelBooking(booking) && (
-                      <button
-                        onClick={() => handleCancelBooking(booking._id)}
-                        className="text-red-600 hover:text-red-700 font-medium text-sm"
-                      >
-                        Cancel Booking
-                      </button>
-                    )}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

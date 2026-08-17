@@ -1,12 +1,6 @@
-const axios = require("axios");
-
 // Calculate carbon footprint for a property
 const calculateCarbonFootprint = async (propertyData) => {
   try {
-    // Estimate based on property characteristics
-    // This is a simplified calculation
-    // In production, you might use an external API like ClimatIQ
-
     let baseEmissions = 5; // kg CO2e per night
 
     // Adjust based on property type
@@ -16,6 +10,8 @@ const calculateCarbonFootprint = async (propertyData) => {
       villa: 1.5,
       cottage: 0.9,
       studio: 0.6,
+      cabin: 0.7,
+      condo: 0.8,
     };
 
     const multiplier =
@@ -23,11 +19,12 @@ const calculateCarbonFootprint = async (propertyData) => {
     baseEmissions *= multiplier;
 
     // Adjust based on amenities
-    if (propertyData.amenities) {
-      if (propertyData.amenities.includes("pool")) baseEmissions += 2;
-      if (propertyData.amenities.includes("hot_tub")) baseEmissions += 1.5;
-      if (propertyData.amenities.includes("gym")) baseEmissions += 1;
-      if (propertyData.amenities.includes("ac")) baseEmissions += 1;
+    if (propertyData.amenities && Array.isArray(propertyData.amenities)) {
+      const lowerAmenities = propertyData.amenities.map((a) => String(a).toLowerCase());
+      if (lowerAmenities.includes("pool")) baseEmissions += 2;
+      if (lowerAmenities.includes("hot_tub") || lowerAmenities.includes("hot tub")) baseEmissions += 1.5;
+      if (lowerAmenities.includes("gym")) baseEmissions += 1;
+      if (lowerAmenities.includes("ac") || lowerAmenities.includes("air conditioning")) baseEmissions += 1;
     }
 
     // Adjust based on max guests
@@ -35,18 +32,23 @@ const calculateCarbonFootprint = async (propertyData) => {
       baseEmissions += propertyData.maxGuests * 0.5;
     }
 
+    const perNight = Math.round(baseEmissions * 100) / 100;
+
     return {
-      value: Math.round(baseEmissions * 100) / 100,
-      unit: "kg CO2e/night",
+      value: perNight,
+      perNight: perNight,
+      unit: "kg CO2e",
       category: "accommodation",
+      calculatedAt: new Date(),
     };
   } catch (error) {
     console.error("Error calculating carbon footprint:", error);
-    // Return default value on error
     return {
       value: 5,
-      unit: "kg CO2e/night",
+      perNight: 5,
+      unit: "kg CO2e",
       category: "accommodation",
+      calculatedAt: new Date(),
     };
   }
 };
@@ -62,8 +64,10 @@ const getCarbonFootprintBatch = async (properties) => {
     console.error("Error calculating batch carbon footprint:", error);
     return properties.map(() => ({
       value: 5,
-      unit: "kg CO2e/night",
+      perNight: 5,
+      unit: "kg CO2e",
       category: "accommodation",
+      calculatedAt: new Date(),
     }));
   }
 };
@@ -72,4 +76,3 @@ module.exports = {
   calculateCarbonFootprint,
   getCarbonFootprintBatch,
 };
-

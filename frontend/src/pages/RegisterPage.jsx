@@ -57,7 +57,10 @@ const RegisterPage = () => {
     }
 
     const { confirmPassword, ...registrationData } = formData;
-    const result = await register(registrationData);
+    const result = await register({
+      ...registrationData,
+      role: registerRole,
+    });
 
     if (result.success) {
       navigate("/");
@@ -212,7 +215,7 @@ const RegisterPage = () => {
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
                 className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="+1 (555) 123-4567"
+                placeholder="Enter 10-digit mobile number"
               />
             </div>
 
