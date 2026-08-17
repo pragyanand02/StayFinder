@@ -1,62 +1,80 @@
 const { GoogleGenAI } = require("@google/genai");
 const Listing = require("../models/Listing");
 
-// Helper to format intelligent rule-based responses if Gemini is unavailable
+// Helper to extract keywords and search database
+const searchListingsFromDatabase = async (queryText) => {
+  try {
+    const rawTokens = queryText
+      .toLowerCase()
+      .replace(/[^\w\s]/gi, "")
+      .split(/\s+/)
+      .filter((t) => t.length > 2 && !["the", "and", "for", "with", "any", "are", "you", "can", "show", "find", "have", "want", "look", "looking", "stays", "stay", "hotel", "hotels", "places", "place"].includes(t));
+
+    const orClauses = [];
+
+    // Check for specific destinations and keywords
+    for (const token of rawTokens) {
+      orClauses.push(
+        { "location.city": new RegExp(token, "i") },
+        { "location.state": new RegExp(token, "i") },
+        { "location.country": new RegExp(token, "i") },
+        { title: new RegExp(token, "i") },
+        { description: new RegExp(token, "i") },
+        { propertyType: new RegExp(token, "i") }
+      );
+    }
+
+    let listings = [];
+    if (orClauses.length > 0) {
+      listings = await Listing.find({
+        status: "active",
+        $or: orClauses,
+      })
+        .limit(3)
+        .lean();
+    }
+
+    // Fallback: If query specifically asked for stays/properties without specific match, show top featured
+    if (
+      (!listings || listings.length === 0) &&
+      (queryText.includes("stay") ||
+        queryText.includes("hotel") ||
+        queryText.includes("villa") ||
+        queryText.includes("place") ||
+        queryText.includes("recommend") ||
+        queryText.includes("top") ||
+        queryText.includes("best") ||
+        queryText.includes("india") ||
+        queryText.includes("all"))
+    ) {
+      listings = await Listing.find({ status: "active" })
+        .sort({ averageRating: -1 })
+        .limit(3)
+        .lean();
+    }
+
+    return listings;
+  } catch (err) {
+    console.warn("Database search error in assistant:", err.message);
+    return [];
+  }
+};
+
+// Intelligent Rule-Based Engine
 const generateSmartPlatformResponse = async (userMessage) => {
   const query = userMessage.toLowerCase().trim();
 
-  // 1. Search / Find properties by city / location
+  // 1. Greetings
   if (
-    query.includes("miami") ||
-    query.includes("york") ||
-    query.includes("california") ||
-    query.includes("san francisco") ||
-    query.includes("colorado") ||
-    query.includes("aspen") ||
-    query.includes("charleston") ||
-    query.includes("los angeles") ||
-    query.includes("villa") ||
-    query.includes("cabin") ||
-    query.includes("apartment") ||
-    query.includes("studio") ||
-    query.includes("condo") ||
-    query.includes("property") ||
-    query.includes("stay") ||
-    query.includes("find") ||
-    query.includes("show") ||
-    query.includes("list") ||
-    query.includes("available") ||
-    query.includes("price") ||
-    query.includes("cheap") ||
-    query.includes("luxury")
+    query === "hi" ||
+    query === "hello" ||
+    query === "hey" ||
+    query === "namaste" ||
+    query === "hii" ||
+    query.startsWith("hi ") ||
+    query.startsWith("hello ")
   ) {
-    try {
-      // Find top matching properties from the database
-      const dbQuery = { status: "active" };
-      if (query.includes("miami")) dbQuery["location.city"] = /miami/i;
-      else if (query.includes("york")) dbQuery["location.city"] = /york/i;
-      else if (query.includes("san francisco")) dbQuery["location.city"] = /san francisco/i;
-      else if (query.includes("aspen") || query.includes("colorado")) dbQuery["location.city"] = /aspen/i;
-      else if (query.includes("charleston")) dbQuery["location.city"] = /charleston/i;
-      else if (query.includes("los angeles")) dbQuery["location.city"] = /los angeles/i;
-      else if (query.includes("villa")) dbQuery.propertyType = "villa";
-      else if (query.includes("cabin")) dbQuery.propertyType = "cabin";
-      else if (query.includes("apartment")) dbQuery.propertyType = "apartment";
-      else if (query.includes("studio")) dbQuery.propertyType = "studio";
-      else if (query.includes("condo")) dbQuery.propertyType = "condo";
-
-      const matchedListings = await Listing.find(dbQuery).limit(3).lean();
-
-      if (matchedListings && matchedListings.length > 0) {
-        let reply = `Here are some great options I found for you:\n\n`;
-        matchedListings.forEach((item, index) => {
-          reply += `🏡 ${index + 1}. **${item.title}**\n📍 Location: ${item.location?.city || ""}, ${item.location?.country || ""}\n💰 Price: $${item.price?.base || 0}/night | Rating: ⭐ ${item.averageRating || 4.8}\n\nYou can click on any card on the homepage to view photos and reserve!`;
-        });
-        return reply;
-      }
-    } catch (err) {
-      console.warn("Error querying database for assistant:", err);
-    }
+    return `Hello! 👋 Welcome to StayFinder! How can I help you today?\n\n• 🏖️ Ask for stays (e.g. "Stays in Goa", "Heritage Haveli in Jaipur", "Villas in Bali")\n• 📅 Learn how to book or check payment methods\n• 🏡 Inquire about becoming a verified host\n• ♻️ Check carbon eco-footprint info`;
   }
 
   // 2. Booking & Reservation process
@@ -67,31 +85,32 @@ const generateSmartPlatformResponse = async (userMessage) => {
     query.includes("reservation") ||
     query.includes("booking")
   ) {
-    return `Booking a stay on StayFinder is quick and secure:\n\n1. 🔍 **Browse & Select**: Choose any property from the Explore page.\n2. 📅 **Dates & Guests**: Select your check-in, check-out dates and guest count.\n3. 💳 **Reserve & Pay**: Click 'Reserve & Pay' to checkout securely with Razorpay (Cards, UPI, NetBanking).\n4. 📱 **Confirmation**: Your booking will instantly show in **My Bookings**!`;
+    return `Booking a stay on StayFinder is super easy:\n\n1. 🔍 **Browse & Choose**: Select your favorite property on the Explore page.\n2. 📅 **Select Dates & Guests**: Pick check-in, check-out dates, and number of guests.\n3. 💳 **Reserve & Pay**: Click 'Reserve & Pay' to checkout via Razorpay (UPI, Credit/Debit Cards, NetBanking).\n4. 📱 **Instant Confirmation**: Your confirmed reservation will show up under 'My Bookings'!`;
   }
 
   // 3. Host Registration & Verification
   if (
     query.includes("become host") ||
     query.includes("become a host") ||
-    query.includes("host") ||
+    query.includes("how to host") ||
     query.includes("list my property") ||
     query.includes("list property") ||
     query.includes("kyc") ||
     query.includes("verification")
   ) {
-    return `To list your home and earn as a StayFinder Host:\n\n1. Click **'Apply for Host'** or visit the **Host** tab.\n2. Complete the **4-step KYC verification** (Personal Info, Aadhaar/PAN, Bank Details, and Property Address).\n3. Once reviewed and approved by our Admin, you can list unlimited properties and manage reservations from your **Host Dashboard**!`;
+    return `To list your home and earn as a StayFinder Host:\n\n1. Click **'Apply for Host'** in the navbar.\n2. Complete our 4-step KYC verification (Personal Info, Aadhaar/PAN, Bank Details, and Property Address).\n3. Once approved by our team, you can list unlimited villas, apartments, or havelis and manage bookings directly from your **Host Dashboard**!`;
   }
 
-  // 4. Payment & Razorpay
+  // 4. Payment & Security
   if (
     query.includes("payment") ||
     query.includes("pay") ||
     query.includes("razorpay") ||
     query.includes("upi") ||
-    query.includes("card")
+    query.includes("card") ||
+    query.includes("price")
   ) {
-    return `We support 100% secure payments via **Razorpay**:\n\n• Credit & Debit Cards (Visa, Mastercard, RuPay)\n• UPI (Google Pay, PhonePe, Paytm)\n• Net Banking from all major banks\n\nAll transactions are encrypted with industry-standard 256-bit security.`;
+    return `We support 100% secure payments via **Razorpay**:\n\n• 💳 **Cards**: Visa, Mastercard, RuPay, Amex\n• 📱 **UPI**: Google Pay, PhonePe, Paytm, BHIM\n• 🏦 **Net Banking**: All major Indian and international banks\n\nAll transactions are secured with 256-bit SSL encryption.`;
   }
 
   // 5. Cancellation & Refunds
@@ -100,7 +119,7 @@ const generateSmartPlatformResponse = async (userMessage) => {
     query.includes("refund") ||
     query.includes("cancellation")
   ) {
-    return `StayFinder Cancellation & Refund Policy:\n\n• **Full Refund**: Free cancellation up to 48 hours prior to check-in.\n• **Partial Refund**: 50% refund for cancellations made within 48 hours.\n• **How to cancel**: Go to 'My Bookings', select the reservation, and click 'Cancel Booking'. Refunds are credited back to your original payment method in 3-5 business days.`;
+    return `StayFinder Cancellation & Refund Policy:\n\n• **Free Cancellation**: Cancel up to 48 hours prior to check-in for a 100% full refund.\n• **Within 48 hours**: 50% refund applied.\n• **How to cancel**: Go to 'My Bookings', select the reservation, and click 'Cancel Booking'. Refunds process back in 3-5 business days.`;
   }
 
   // 6. Carbon footprint & sustainability
@@ -111,7 +130,7 @@ const generateSmartPlatformResponse = async (userMessage) => {
     query.includes("green") ||
     query.includes("sustainable")
   ) {
-    return `🌱 **StayFinder Eco-Metrics**:\nEvery property on StayFinder includes an automated **Carbon Footprint estimation** (kg CO2e per night) based on its size, room type, and energy amenities (AC, pool, heating). Choosing green stays helps reduce your travel impact!`;
+    return `🌱 **StayFinder Eco-Metrics**:\nEvery stay on StayFinder calculates an automated **Carbon Footprint score** (kg CO2e per night) based on its square footage, room type, and energy amenities (AC, pool heating, heating). Choosing green stays helps reduce your carbon footprint!`;
   }
 
   // 7. Safety & Contact
@@ -123,11 +142,23 @@ const generateSmartPlatformResponse = async (userMessage) => {
     query.includes("help") ||
     query.includes("call")
   ) {
-    return `Our 24/7 customer support team is always here for you:\n\n📧 **Email**: support@stayfinder.com\n📞 **Toll-Free**: +1 (800) 555-STAY\n💬 You can also contact property hosts directly using the **'Contact Host'** button on any listing page!`;
+    return `Our 24/7 customer support team is always here for you:\n\n📧 **Email**: support@stayfinder.com\n📞 **Helpline**: +91 98200 11223\n💬 You can also contact property hosts directly using the **'Contact Host'** button on any listing page!`;
   }
 
-  // Default friendly guidance
-  return `Hello! I'm your StayFinder AI Assistant 🏡. How can I help you today?\n\n• Ask about **destinations** (e.g. "Stays in Miami" or "Cozy mountain cabins")\n• Learn **how to book** or check **payment options**\n• Inquire about **becoming a verified host**\n• Check **cancellation and refund rules**`;
+  // 8. Database Property Search (for any destination, city, country, or stay type)
+  const matchedListings = await searchListingsFromDatabase(query);
+
+  if (matchedListings && matchedListings.length > 0) {
+    let reply = `Here are some top stays matching your request:\n\n`;
+    matchedListings.forEach((item, index) => {
+      reply += `🏡 ${index + 1}. **${item.title}**\n📍 Location: ${item.location?.city || ""}, ${item.location?.country || ""}\n💰 Price: $${item.price?.base || 0}/night | ⭐ Rating: ${item.averageRating || 4.9} (${item.maxGuests || 2} guests)\n\n`;
+    });
+    reply += `You can view photos and reserve directly from the Explore page!`;
+    return reply;
+  }
+
+  // Default response
+  return `I'm your StayFinder AI Assistant 🏡!\n\nI can help you:\n• Find top stays (e.g. "Stays in Goa", "Palace in Udaipur", "Villas in Bali", "Chalet in Manali")\n• Guide you on **booking** and **payment options**\n• Explain **host KYC registration** and **cancellation policies**\n\nWhat would you like to explore?`;
 };
 
 // Chat endpoint handler
@@ -146,14 +177,15 @@ exports.chat = async (req, res) => {
     const userText = message.trim();
     const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
 
-    // If a valid Google Gemini API key is provided and does not fail, try Gemini
+    // If a valid Google Gemini API key is configured, use Gemini
     if (apiKey && apiKey.startsWith("AIzaSy")) {
       try {
         const ai = new GoogleGenAI({ apiKey });
         const prompt = `
-You are a warm, knowledgeable assistant for StayFinder, a property rental platform similar to Airbnb.
+You are a warm, helpful, and knowledgeable AI concierge for StayFinder, a property rental platform featuring top destinations across India (Goa, Jaipur, Udaipur, Manali, Kerala, Mumbai, Rishikesh, Bangalore) and Worldwide (Bali, Paris, Dubai, Santorini, Tokyo, Switzerland, Maldives).
+
 Provide friendly, concise, and helpful answers to user queries regarding:
-- Finding and exploring vacation rentals (villas, cabins, apartments)
+- Finding and exploring vacation rentals (villas, cabins, apartments, heritage havelis)
 - Booking procedures and payments (Razorpay)
 - Host verification, KYC, and listing management
 - Carbon footprint and eco-friendly travel
@@ -179,11 +211,11 @@ ${userText}
           });
         }
       } catch (geminiError) {
-        console.warn("Gemini API call skipped, using smart platform engine:", geminiError.message);
+        console.warn("Gemini API skipped, using intelligent database engine:", geminiError.message);
       }
     }
 
-    // Smart platform engine (instant, reliable, connects to MongoDB listings)
+    // Dynamic database-aware intelligent engine
     const smartReply = await generateSmartPlatformResponse(userText);
 
     return res.status(200).json({
@@ -196,7 +228,7 @@ ${userText}
     res.status(200).json({
       success: true,
       message:
-        "Welcome to StayFinder! You can explore vacation homes, book stays securely with Razorpay, or apply to become a host from the menu.",
+        "Welcome to StayFinder! You can explore vacation homes across India and worldwide, book stays securely with Razorpay, or apply to become a host.",
       userId: req.user ? req.user.id : null,
     });
   }

@@ -44,6 +44,7 @@ router.put(
   statusValidation,
   updateBookingStatus
 );
-router.delete("/:id", authorize("host", "admin"), deleteBooking);
+// Delete / Cancel is allowed for booking owner, host, or admin (permission checked in service)
+router.delete("/:id", deleteBooking);
 
 module.exports = router;

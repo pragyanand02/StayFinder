@@ -1,100 +1,88 @@
 const Booking = require("../models/Booking");
 const Listing = require("../models/Listing");
 
-// Helper function to check listing availability
-const checkAvailability = async (listingId, checkIn, checkOut) => {
-  const existingBooking = await Booking.findOne({
-    listing: listingId,
-    status: { $in: ["confirmed", "pending"] },
-    checkIn: { $lt: new Date(checkOut) },
-    checkOut: { $gt: new Date(checkIn) },
-  });
-
-  
-  return !existingBooking;
-};
-
 const createBookingService = async (user, body) => {
   const { listingId, checkIn, checkOut, guests } = body;
   const listing = await Listing.findById(listingId);
   if (!listing) throw new Error("Listing not found");
-  const isAvailable = await checkAvailability(listingId, checkIn, checkOut);
-  if (!isAvailable) throw new Error("Listing is not available for these dates");
-  if (guests > listing.maxGuests)
-    throw new Error("Number of guests exceeds maximum allowed");
+
+  const checkInDate = new Date(checkIn);
+  const checkOutDate = new Date(checkOut);
   const nights = Math.ceil(
-    (new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24)
+    (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24)
   );
-  const totalPrice =
-    nights * listing.price.base +
-    (listing.price.cleaningFee || 0) +
-    (listing.price.serviceFee || 0);
+
+  if (nights <= 0) {
+    throw new Error("Check-out date must be after check-in date");
+  }
+
+  const basePrice = (listing.price?.base || 0) * nights;
+  const cleaningFee = listing.price?.cleaningFee || 0;
+  const serviceFee = listing.price?.serviceFee || 0;
+  const totalPrice = basePrice + cleaningFee + serviceFee;
+
   const booking = await Booking.create({
     listing: listingId,
-    guest: user._id,
-    host: listing.host,
-    checkIn,
-    checkOut,
+    user: user._id,
+    checkIn: checkInDate,
+    checkOut: checkOutDate,
     guests,
     totalPrice,
+    status: "confirmed",
   });
-  await Listing.findByIdAndUpdate(listingId, {
-    $push: {
-      availability: {
-        startDate: checkIn,
-        endDate: checkOut,
-      },
-    },
-  });
+
   return booking;
 };
 
 const getUserBookingsService = async (user) => {
-  return Booking.find({ guest: user._id })
-    .populate("listing", "title images location price")
-    .populate("host", "firstName lastName email avatar")
+  return Booking.find({ user: user._id })
+    .populate("listing")
     .sort({ createdAt: -1 });
 };
 
 const getHostBookingsService = async (user) => {
-  return Booking.find({ host: user._id })
-    .populate("listing", "title images location price")
-    .populate("guest", "firstName lastName email avatar")
+  const listings = await Listing.find({ host: user._id });
+  const listingIds = listings.map((listing) => listing._id);
+  return Booking.find({ listing: { $in: listingIds } })
+    .populate("listing")
+    .populate("user", "firstName lastName email phoneNumber")
     .sort({ createdAt: -1 });
 };
 
 const getBookingService = async (user, bookingId) => {
   const booking = await Booking.findById(bookingId)
-    .populate("listing", "title images location price")
-    .populate("host", "firstName lastName email avatar phoneNumber")
-    .populate("guest", "firstName lastName email avatar phoneNumber");
+    .populate("listing")
+    .populate("user", "firstName lastName email phoneNumber");
   if (!booking) throw new Error("Booking not found");
-  if (
-    booking.guest._id.toString() !== user._id.toString() &&
-    booking.host._id.toString() !== user._id.toString()
-  ) {
+
+  const isOwner = booking.user._id.toString() === user._id.toString();
+  const isHost =
+    booking.listing?.host?.toString() === user._id.toString();
+  const isAdmin = user.role === "admin";
+
+  if (!isOwner && !isHost && !isAdmin) {
     throw new Error("Not authorized to view this booking");
   }
+
   return booking;
 };
 
 const updateBookingStatusService = async (user, bookingId, status) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) throw new Error("Booking not found");
-  if (booking.host.toString() !== user._id.toString())
+  const listing = await Listing.findById(booking.listing);
+  if (!listing) throw new Error("Listing not found");
+
+  const isOwner = booking.user.toString() === user._id.toString();
+  const isHost = listing.host.toString() === user._id.toString();
+  const isAdmin = user.role === "admin";
+
+  if (!isOwner && !isHost && !isAdmin) {
     throw new Error("Not authorized to update this booking");
+  }
+
   booking.status = status;
   await booking.save();
-  if (status === "cancelled") {
-    await Listing.findByIdAndUpdate(booking.listing, {
-      $pull: {
-        availability: {
-          startDate: booking.checkIn,
-          endDate: booking.checkOut,
-        },
-      },
-    });
-  }
   return booking;
 };
 
@@ -102,21 +90,17 @@ const deleteBookingService = async (user, bookingId) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) throw new Error("Booking not found");
   const listing = await Listing.findById(booking.listing);
-  if (!listing) throw new Error("Listing not found");
-  if (listing.host.toString() !== user._id.toString())
-    throw new Error("Not authorized to delete this booking");
-  if (booking.status === "confirmed") {
-    await Listing.findByIdAndUpdate(booking.listing, {
-      $pull: {
-        availability: {
-          startDate: booking.checkIn,
-          endDate: booking.checkOut,
-        },
-      },
-    });
+
+  const isOwner = booking.user.toString() === user._id.toString();
+  const isHost = listing && listing.host.toString() === user._id.toString();
+  const isAdmin = user.role === "admin";
+
+  if (!isOwner && !isHost && !isAdmin) {
+    throw new Error("Not authorized to cancel or delete this booking");
   }
+
   await booking.deleteOne();
-  return { message: "Booking deleted successfully" };
+  return { message: "Booking cancelled successfully" };
 };
 
 module.exports = {

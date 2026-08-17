@@ -75,9 +75,9 @@ const ListingDetailPage = () => {
         orderId: orderId,
         amount: totalPrice,
         currency: "INR",
-        customerName: "Guest User",
-        customerEmail: "guest@stayfinder.com",
-        customerPhone: "9999999999",
+        customerName: user ? `${user.firstName} ${user.lastName}` : "Guest User",
+        customerEmail: user?.email || "guest@stayfinder.com",
+        customerPhone: user?.phoneNumber || "9876543210",
         onSuccess: async (paymentData) => {
           try {
             // Verify payment
