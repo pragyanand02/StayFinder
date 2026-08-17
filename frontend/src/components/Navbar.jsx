@@ -1,317 +1,120 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 const Navbar = () => {
   const { user, isAuthenticated, logout, loading } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isHostMenuOpen, setIsHostMenuOpen] = useState(false);
+
+  const profileMenuRef = useRef(null);
   const hostMenuRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Close menus when user role changes
+  const isActive = (path) => location.pathname === path;
+
+  // Close all menus when location/route or role changes
   useEffect(() => {
-    setIsMenuOpen(false);
+    setIsMobileMenuOpen(false);
+    setIsProfileMenuOpen(false);
     setIsHostMenuOpen(false);
-  }, [user?.role]);
+  }, [location.pathname, user?.role]);
 
+  // Click outside listener for dropdowns
   useEffect(() => {
     function handleClickOutside(event) {
-      if (hostMenuRef.current && !hostMenuRef.current.contains(event.target)) {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target)
+      ) {
+        setIsProfileMenuOpen(false);
+      }
+      if (
+        hostMenuRef.current &&
+        !hostMenuRef.current.contains(event.target)
+      ) {
         setIsHostMenuOpen(false);
       }
     }
-    if (isHostMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isHostMenuOpen]);
+  }, []);
 
   const handleLogout = () => {
     logout();
     navigate("/");
-    setIsMenuOpen(false);
+    setIsProfileMenuOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
+    <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center">
             <Link
               to="/"
-              className="text-2xl font-bold text-blue-600 hover:text-blue-700 transition"
+              className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:opacity-90 transition flex items-center gap-1.5"
             >
-              StayFinder
+              <span>🏡</span>
+              <span>StayFinder</span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              <Link
-                to="/"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition"
-              >
-                Home
-              </Link>
-              {isAuthenticated && (
-                <>
-                  <Link
-                    to="/bookings"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition"
-                  >
-                    Bookings
-                  </Link>
-                  {user?.role === "admin" ? (
-                    <Link
-                      to="/admin/host-verification"
-                      className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1"
-                    >
-                      <span>Admin Panel</span>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                        />
-                      </svg>
-                    </Link>
-                  ) : user?.role === "host" ? (
-                    <div className="relative" ref={hostMenuRef}>
-                      <button
-                        className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1"
-                        onClick={() => setIsHostMenuOpen((open) => !open)}
-                        tabIndex={0}
-                      >
-                        <span>Host</span>
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                      {isHostMenuOpen && (
-                        <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border">
-                          <Link
-                            to="/listings/new"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 4v16m8-8H4"
-                              />
-                            </svg>
-                            <span>List New Property</span>
-                          </Link>
-                          <Link
-                            to="/host/dashboard"
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                              />
-                            </svg>
-                            <span>Manage Properties</span>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Link
-                      to="/host/apply"
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition flex items-center space-x-1"
-                    >
-                      <span>Apply for Host</span>
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 8l4 4m0 0l-4 4m4-4H3"
-                        />
-                      </svg>
-                    </Link>
-                  )}
-                </>
-              )}
-              {loading ? (
-                // Skeleton loader while auth is bootstrapping
-                <div className="flex items-center space-x-2 ml-4">
-                  <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse"></div>
-                </div>
-              ) : isAuthenticated ? (
-                <div className="relative group ml-4">
-                  <button
-                    onClick={() => setIsMenuOpen(!isMenuOpen)}
-                    className="flex items-center focus:outline-none"
-                  >
-                    <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white text-lg font-semibold">
-                      <svg
-                        className="w-6 h-6"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                  {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg py-1 z-50 border">
-                      <Link
-                        to="/profile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Profile
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <Link
-                    to="/login"
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    to="/register"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition"
-                  >
-                    Sign Up
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600"
-            >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50">
+          <div className="hidden md:flex items-center space-x-1 lg:space-x-3">
             <Link
               to="/"
-              className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsMenuOpen(false)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                isActive("/")
+                  ? "text-blue-600 bg-blue-50 font-semibold"
+                  : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+              }`}
             >
               Home
             </Link>
-            {!loading && isAuthenticated && (
+
+            {isAuthenticated && (
               <>
                 <Link
                   to="/bookings"
-                  className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsMenuOpen(false)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition ${
+                    isActive("/bookings")
+                      ? "text-blue-600 bg-blue-50 font-semibold"
+                      : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                  }`}
                 >
                   Bookings
                 </Link>
+
                 {user?.role === "admin" ? (
                   <Link
                     to="/admin/host-verification"
-                    className="bg-red-600 hover:bg-red-700 text-white block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2"
-                    onClick={() => setIsMenuOpen(false)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-1 shadow-sm"
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                      />
-                    </svg>
-                    <span>Admin Panel</span>
+                    <span>🛡️ Admin Panel</span>
                   </Link>
                 ) : user?.role === "host" ? (
-                  <>
-                    <Link
-                      to="/listings/new"
-                      className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2"
-                      onClick={() => setIsMenuOpen(false)}
+                  <div className="relative" ref={hostMenuRef}>
+                    <button
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1 ${
+                        isActive("/host/dashboard") || isActive("/listings/new")
+                          ? "text-blue-600 bg-blue-50 font-semibold"
+                          : "text-gray-700 hover:text-blue-600 hover:bg-gray-50"
+                      }`}
+                      onClick={() => setIsHostMenuOpen((open) => !open)}
                     >
+                      <span>Host Menu</span>
                       <svg
-                        className="w-5 h-5"
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          isHostMenuOpen ? "rotate-180" : ""
+                        }`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -320,94 +123,231 @@ const Navbar = () => {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M12 4v16m8-8H4"
+                          d="M19 9l-7 7-7-7"
                         />
                       </svg>
-                      <span>List New Property</span>
-                    </Link>
-                    <Link
-                      to="/host/dashboard"
-                      className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                        />
-                      </svg>
-                      <span>Manage Properties</span>
-                    </Link>
-                  </>
+                    </button>
+                    {isHostMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl py-1 z-50 border border-gray-100 animate-fadeIn">
+                        <Link
+                          to="/listings/new"
+                          className="px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center space-x-2 transition"
+                          onClick={() => setIsHostMenuOpen(false)}
+                        >
+                          <span>➕</span>
+                          <span>List New Property</span>
+                        </Link>
+                        <Link
+                          to="/host/dashboard"
+                          className="px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center space-x-2 transition"
+                          onClick={() => setIsHostMenuOpen(false)}
+                        >
+                          <span>📊</span>
+                          <span>Manage Properties</span>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <Link
                     to="/host/apply"
-                    className="bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2"
-                    onClick={() => setIsMenuOpen(false)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-1 shadow-sm"
                   >
                     <span>Apply for Host</span>
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 8l4 4m0 0l-4 4m4-4H3"
-                      />
-                    </svg>
+                    <span className="ml-1 font-bold">→</span>
                   </Link>
                 )}
               </>
             )}
+
+            {/* Profile / Auth Menu */}
             {loading ? (
-              <div className="px-3 py-2 space-y-2">
-                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-                <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-              </div>
+              <div className="w-9 h-9 bg-gray-200 rounded-full animate-pulse ml-2"></div>
             ) : isAuthenticated ? (
-              <>
-                <Link
-                  to="/profile"
-                  className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Profile
-                </Link>
+              <div className="relative ml-2" ref={profileMenuRef}>
                 <button
-                  onClick={handleLogout}
-                  className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="flex items-center space-x-2 focus:outline-none p-1 rounded-full hover:ring-2 hover:ring-blue-400 transition"
+                  aria-label="User menu"
                 >
-                  Logout
+                  <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm">
+                    {user?.firstName ? user.firstName.charAt(0).toUpperCase() : "U"}
+                  </div>
                 </button>
-              </>
+
+                {/* Profile Dropdown */}
+                {isProfileMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl py-2 z-50 border border-gray-100 animate-fadeIn">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {user?.firstName} {user?.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                      <span className="mt-1 inline-block px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded bg-blue-100 text-blue-700">
+                        {user?.role || "user"}
+                      </span>
+                    </div>
+
+                    <Link
+                      to="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition flex items-center gap-2"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <span>👤</span>
+                      <span>Profile</span>
+                    </Link>
+
+                    <Link
+                      to="/bookings"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition flex items-center gap-2"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <span>🧳</span>
+                      <span>My Bookings</span>
+                    </Link>
+
+                    <div className="border-t border-gray-100 my-1"></div>
+
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2"
+                    >
+                      <span>🚪</span>
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <>
+              <div className="flex items-center space-x-2 ml-2">
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="text-gray-700 hover:text-blue-600 px-3 py-1.5 rounded-lg text-sm font-medium transition hover:bg-gray-50"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition shadow-sm"
                 >
                   Sign Up
                 </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile hamburger button */}
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-700 hover:text-blue-600 p-2 rounded-lg focus:outline-none hover:bg-gray-100"
+              aria-label="Toggle mobile menu"
+            >
+              {isMobileMenuOpen ? (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Dropdown Navigation (Strictly md:hidden) */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden px-3 pt-2 pb-4 space-y-1 bg-white border-t border-gray-100 rounded-b-xl shadow-lg">
+            <Link
+              to="/"
+              className={`block px-3 py-2 rounded-lg text-base font-medium transition ${
+                isActive("/") ? "bg-blue-50 text-blue-600 font-semibold" : "text-gray-700 hover:bg-gray-50"
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/bookings"
+                  className={`block px-3 py-2 rounded-lg text-base font-medium transition ${
+                    isActive("/bookings") ? "bg-blue-50 text-blue-600 font-semibold" : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  My Bookings
+                </Link>
+
+                {user?.role === "admin" ? (
+                  <Link
+                    to="/admin/host-verification"
+                    className="block px-3 py-2 rounded-lg text-base font-medium bg-red-50 text-red-600 hover:bg-red-100"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    🛡️ Admin Panel
+                  </Link>
+                ) : user?.role === "host" ? (
+                  <>
+                    <Link
+                      to="/host/dashboard"
+                      className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      📊 Host Dashboard
+                    </Link>
+                    <Link
+                      to="/listings/new"
+                      className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      ➕ List New Property
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    to="/host/apply"
+                    className="block px-3 py-2 rounded-lg text-base font-medium bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Apply for Host →
+                  </Link>
+                )}
+
+                <Link
+                  to="/profile"
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  👤 Profile ({user?.firstName})
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left block px-3 py-2 rounded-lg text-base font-medium text-red-600 hover:bg-red-50"
+                >
+                  🚪 Logout
+                </button>
               </>
+            ) : (
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                <Link
+                  to="/login"
+                  className="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="block px-3 py-2 rounded-lg text-base font-medium bg-blue-600 text-white text-center hover:bg-blue-700"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
           </div>
         )}
