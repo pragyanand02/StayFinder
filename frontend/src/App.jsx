@@ -4,6 +4,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
 import ChatButton from "./components/Chat/ChatButton.jsx";
+import MobileBottomNav from "./components/MobileBottomNav.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import ListingDetailPage from "./pages/ListingDetailPage.jsx";
 import CreateListingPage from "./pages/CreateListingPage.jsx";
@@ -27,7 +28,7 @@ const App = () => (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col">
         <Navbar />
-        <main className="flex-grow">
+        <main className="flex-grow pb-12 md:pb-0">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/listings/:id" element={<ListingDetailPage />} />
@@ -109,6 +110,7 @@ const App = () => (
           </Routes>
         </main>
         <Footer />
+        <MobileBottomNav />
         <ChatButton />
       </div>
     </Router>
