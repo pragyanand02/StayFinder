@@ -46,36 +46,6 @@ const ProfilePage = () => {
         </div>
       )}
 
-      {user?.role === "user" ? (
-        <div className="mb-4">
-          <p className="text-gray-600 mb-4">
-            Want to earn by sharing your space? Apply to become a host to list
-            your properties and manage bookings.
-          </p>
-          <button
-            onClick={() => {
-              console.log("Apply for Host button clicked");
-              navigate("/host/apply");
-            }}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition flex items-center space-x-2"
-          >
-            <span>Apply for Host</span>
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 8l4 4m0 0l-4 4m4-4H3"
-              />
-            </svg>
-          </button>
-        </div>
-      ) : null}
       {user?.role === "host" && (
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-4">Host Dashboard</h3>

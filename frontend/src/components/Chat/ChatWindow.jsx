@@ -51,7 +51,7 @@ const getClientSmartReply = (queryText) => {
   }
 
   if (query.includes("host") || query.includes("list") || query.includes("kyc")) {
-    return `To become a StayFinder Host:\n\n1. Click **'Apply for Host'** in the navbar.\n2. Complete the 4-step KYC verification (Personal Info, Aadhaar/PAN, Bank Details, Property Address).\n3. Once approved by our team, you can list properties and manage bookings from your **Host Dashboard**!`;
+    return `Host registrations and applications are currently disabled on StayFinder. If you need any assistance, please contact our support team.`;
   }
 
   if (query.includes("payment") || query.includes("pay") || query.includes("razorpay") || query.includes("upi")) {
@@ -66,7 +66,7 @@ const getClientSmartReply = (queryText) => {
     return `🌱 **StayFinder Eco-Metrics**:\nEvery stay includes an automated **Carbon Footprint estimation** (kg CO2e per night) based on its square footage, room type, and energy amenities to help you travel sustainably!`;
   }
 
-  return `I'm your StayFinder Concierge 🏡!\n\nI can help you with:\n• 🏖️ **Destinations**: Ask for Goa, Manali, Jaipur, Udaipur, Kerala, Bali, Paris, Dubai, Maldives...\n• 💳 **Booking & Razorpay Payments**\n• 🏡 **Host Registration & KYC Verification**\n• 🛡️ **Cancellation & Refund Rules**\n\nWhat would you like to explore?`;
+  return `I'm your StayFinder Concierge 🏡!\n\nI can help you with:\n• 🏖️ **Destinations**: Ask for Goa, Manali, Jaipur, Udaipur, Kerala, Bali, Paris, Dubai, Maldives...\n• 💳 **Booking & Razorpay Payments**\n• 🛡️ **Cancellation & Refund Rules**\n\nWhat would you like to explore?`;
 };
 
 const ChatWindow = ({ onClose }) => {

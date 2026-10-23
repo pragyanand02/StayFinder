@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
@@ -74,30 +74,9 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/host/become"
-              element={
-                <ProtectedRoute>
-                  <BecomeHostPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/host/apply"
-              element={
-                <ProtectedRoute>
-                  <HostVerificationForm />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/host/verification-pending"
-              element={
-                <ProtectedRoute>
-                  <VerificationPendingPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/host/become" element={<Navigate to="/" replace />} />
+            <Route path="/host/apply" element={<Navigate to="/" replace />} />
+            <Route path="/host/verification-pending" element={<Navigate to="/" replace />} />
             <Route
               path="/admin/host-verification"
               element={

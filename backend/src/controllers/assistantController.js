@@ -96,9 +96,9 @@ const generateSmartPlatformResponse = async (userMessage) => {
     query.includes("list my property") ||
     query.includes("list property") ||
     query.includes("kyc") ||
-    query.includes("verification")
+    query.includes("host")
   ) {
-    return `To list your home and earn as a StayFinder Host:\n\n1. Click **'Apply for Host'** in the navbar.\n2. Complete our 4-step KYC verification (Personal Info, Aadhaar/PAN, Bank Details, and Property Address).\n3. Once approved by our team, you can list unlimited villas, apartments, or havelis and manage bookings directly from your **Host Dashboard**!`;
+    return `Host registrations and applications are currently disabled on StayFinder. If you have any inquiries, please contact our support team.`;
   }
 
   // 4. Payment & Security
@@ -228,7 +228,7 @@ ${userText}
     res.status(200).json({
       success: true,
       message:
-        "Welcome to StayFinder! You can explore vacation homes across India and worldwide, book stays securely with Razorpay, or apply to become a host.",
+        "Welcome to StayFinder! You can explore vacation homes across India and worldwide, and book stays securely with Razorpay.",
       userId: req.user ? req.user.id : null,
     });
   }

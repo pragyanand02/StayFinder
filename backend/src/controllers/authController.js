@@ -101,16 +101,14 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// @desc    Upgrade user to host role
+// @desc    Upgrade user to host role (Disabled)
 // @route   PUT /api/auth/become-host
 // @access  Private
 const becomeHost = async (req, res) => {
-  try {
-    const user = await becomeHostService(req.user);
-    res.json(user);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
+  return res.status(403).json({
+    success: false,
+    message: "Host self-registration is currently disabled.",
+  });
 };
 
 // @desc    Logout user

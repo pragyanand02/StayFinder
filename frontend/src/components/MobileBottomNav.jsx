@@ -62,19 +62,7 @@ const MobileBottomNav = () => {
             </svg>
             Admin
           </Link>
-        ) : (
-          <Link
-            to={isAuthenticated ? "/host/apply" : "/login"}
-            className={`flex flex-col items-center py-1 px-2 rounded-lg text-xs font-medium ${
-              isActive("/host/apply") ? "text-blue-600 font-bold" : "text-gray-500 hover:text-blue-500"
-            }`}
-          >
-            <svg className="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Host
-          </Link>
-        )}
+        ) : null}
 
         {/* User Profile / Account */}
         <Link

@@ -148,15 +148,7 @@ const Navbar = () => {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <Link
-                    to="/host/apply"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition flex items-center space-x-1 shadow-sm"
-                  >
-                    <span>Apply for Host</span>
-                    <span className="ml-1 font-bold">→</span>
-                  </Link>
-                )}
+                ) : null}
               </>
             )}
 
@@ -306,15 +298,7 @@ const Navbar = () => {
                       ➕ List New Property
                     </Link>
                   </>
-                ) : (
-                  <Link
-                    to="/host/apply"
-                    className="block px-3 py-2 rounded-lg text-base font-medium bg-blue-600 text-white hover:bg-blue-700"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Apply for Host →
-                  </Link>
-                )}
+                ) : null}
 
                 <Link
                   to="/profile"

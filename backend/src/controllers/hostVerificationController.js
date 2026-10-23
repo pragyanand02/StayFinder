@@ -7,29 +7,12 @@ const {
   rejectVerification,
 } = require("../services/hostVerificationService");
 
-// Submit verification step
+// Submit verification step (Disabled)
 exports.submitStep = async (req, res) => {
-  try {
-    const { stepNumber } = req.params;
-    const userId = req.user.id;
-
-    const verification = await createOrUpdateVerification(
-      userId,
-      req.body,
-      parseInt(stepNumber)
-    );
-
-    res.status(200).json({
-      success: true,
-      message: `Step ${stepNumber} submitted successfully`,
-      verification,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+  return res.status(403).json({
+    success: false,
+    message: "Host application is currently disabled.",
+  });
 };
 
 // Get verification status

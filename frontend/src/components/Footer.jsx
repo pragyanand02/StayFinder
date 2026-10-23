@@ -21,7 +21,7 @@ const Footer = () => {
     help: {
       title: "Help Center & FAQ",
       content:
-        "• How do I book a stay? Browse listings, choose check-in/out dates, and click 'Reserve & Pay'.\n• How do I become a host? Click 'Apply for Host', fill out the 4-step verification, and start listing properties once approved.\n• What payment methods are supported? All major debit/credit cards, UPI, and NetBanking via secure Razorpay checkout.",
+        "• How do I book a stay? Browse listings, choose check-in/out dates, and click 'Reserve & Pay'.\n• What payment methods are supported? All major debit/credit cards, UPI, and NetBanking via secure Razorpay checkout.",
     },
     safety: {
       title: "Safety & Security",
@@ -186,13 +186,7 @@ const Footer = () => {
                           <span>🛡️</span> Admin Panel
                         </Link>
                       </li>
-                    ) : (
-                      <li>
-                        <Link to="/host/apply" className="text-gray-300 hover:text-green-400 transition flex items-center gap-1">
-                          <span>🏡</span> Become a Host
-                        </Link>
-                      </li>
-                    )}
+                    ) : null}
                     <li>
                       <button
                         onClick={() => {
@@ -216,11 +210,6 @@ const Footer = () => {
                   <li>
                     <Link to="/register" className="text-gray-300 hover:text-blue-400 transition flex items-center gap-1">
                       <span>✨</span> Create New Account
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/host/become" className="text-gray-300 hover:text-blue-400 transition flex items-center gap-1">
-                      <span>🏡</span> Host Your Home
                     </Link>
                   </li>
                 </ul>

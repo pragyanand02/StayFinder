@@ -10,14 +10,8 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Allow /host/become, /host/apply, and /host/verification-pending for non-hosts, block other /host routes for non-hosts
-  if (
-    location.pathname.startsWith("/host") &&
-    location.pathname !== "/host/become" &&
-    location.pathname !== "/host/apply" &&
-    location.pathname !== "/host/verification-pending" &&
-    user.role !== "host"
-  ) {
+  // Block /host routes for non-hosts
+  if (location.pathname.startsWith("/host") && user.role !== "host") {
     return <Navigate to="/profile" replace />;
   }
   if (
