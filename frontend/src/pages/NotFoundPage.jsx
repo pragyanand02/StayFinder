@@ -43,7 +43,7 @@ const NotFoundPage = () => {
         
         <div className="mt-12">
           <p className="text-sm text-gray-500">
-            Need help? <Link to="/contact" className="text-blue-600 hover:text-blue-700 font-medium">Contact our support team</Link>
+            Need help? <a href="/contact-us.html" className="text-blue-600 hover:text-blue-700 font-medium">Contact our support team</a>
           </p>
         </div>
       </div>

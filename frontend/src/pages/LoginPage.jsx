@@ -72,7 +72,7 @@ const LoginPage = () => {
 
         {redirected && (
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md text-sm mb-4 text-center">
-            Please log in to access bookings or host features.
+            Please log in to access your bookings and account.
           </div>
         )}
 

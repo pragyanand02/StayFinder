@@ -158,7 +158,7 @@ const generateSmartPlatformResponse = async (userMessage) => {
   }
 
   // Default response
-  return `I'm your StayFinder AI Assistant 🏡!\n\nI can help you:\n• Find top stays (e.g. "Stays in Goa", "Palace in Udaipur", "Villas in Bali", "Chalet in Manali")\n• Guide you on **booking** and **payment options**\n• Explain **host KYC registration** and **cancellation policies**\n\nWhat would you like to explore?`;
+  return `I'm your StayFinder AI Assistant 🏡!\n\nI can help you:\n• Find top stays (e.g. "Stays in Goa", "Palace in Udaipur", "Villas in Bali", "Chalet in Manali")\n• Guide you on **booking** and **payment options**\n• Explain **cancellation and refund policies**\n\nWhat would you like to explore?`;
 };
 
 // Chat endpoint handler
@@ -186,8 +186,7 @@ You are a warm, helpful, and knowledgeable AI concierge for StayFinder, a proper
 
 Provide friendly, concise, and helpful answers to user queries regarding:
 - Finding and exploring vacation rentals (villas, cabins, apartments, heritage havelis)
-- Booking procedures and payments (Razorpay)
-- Host verification, KYC, and listing management
+- Property details, amenities, and host contact
 - Carbon footprint and eco-friendly travel
 - Cancellation and refund policies
 
