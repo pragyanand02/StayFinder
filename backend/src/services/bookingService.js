@@ -16,6 +16,20 @@ const createBookingService = async (user, body) => {
     throw new Error("Check-out date must be after check-in date");
   }
 
+  // Prevent double bookings: check for existing overlapping bookings
+  const overlappingBooking = await Booking.findOne({
+    listing: listingId,
+    status: { $in: ["confirmed", "pending"] },
+    checkIn: { $lt: checkOutDate },
+    checkOut: { $gt: checkInDate },
+  });
+
+  if (overlappingBooking) {
+    throw new Error(
+      "This property is already booked for the selected dates. Please choose different dates."
+    );
+  }
+
   const basePrice = (listing.price?.base || 0) * nights;
   const cleaningFee = listing.price?.cleaningFee || 0;
   const serviceFee = listing.price?.serviceFee || 0;
