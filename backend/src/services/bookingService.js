@@ -21,9 +21,13 @@ const createBookingService = async (user, body) => {
   const serviceFee = listing.price?.serviceFee || 0;
   const totalPrice = basePrice + cleaningFee + serviceFee;
 
+  const hostId = listing.host?._id || listing.host || null;
+
   const booking = await Booking.create({
     listing: listingId,
+    guest: user._id,
     user: user._id,
+    host: hostId,
     checkIn: checkInDate,
     checkOut: checkOutDate,
     guests,
@@ -35,29 +39,59 @@ const createBookingService = async (user, body) => {
 };
 
 const getUserBookingsService = async (user) => {
-  return Booking.find({ user: user._id })
-    .populate("listing")
+  return Booking.find({
+    $or: [{ guest: user._id }, { user: user._id }],
+  })
+    .populate({
+      path: "listing",
+      populate: {
+        path: "host",
+        select: "firstName lastName email phoneNumber",
+      },
+    })
     .sort({ createdAt: -1 });
 };
 
 const getHostBookingsService = async (user) => {
   const listings = await Listing.find({ host: user._id });
   const listingIds = listings.map((listing) => listing._id);
-  return Booking.find({ listing: { $in: listingIds } })
+  return Booking.find({
+    $or: [{ host: user._id }, { listing: { $in: listingIds } }],
+  })
     .populate("listing")
+    .populate("guest", "firstName lastName email phoneNumber")
     .populate("user", "firstName lastName email phoneNumber")
     .sort({ createdAt: -1 });
 };
 
 const getBookingService = async (user, bookingId) => {
   const booking = await Booking.findById(bookingId)
-    .populate("listing")
+    .populate({
+      path: "listing",
+      populate: {
+        path: "host",
+        select: "firstName lastName email phoneNumber",
+      },
+    })
+    .populate("guest", "firstName lastName email phoneNumber")
     .populate("user", "firstName lastName email phoneNumber");
   if (!booking) throw new Error("Booking not found");
 
-  const isOwner = booking.user._id.toString() === user._id.toString();
-  const isHost =
-    booking.listing?.host?.toString() === user._id.toString();
+  const guestId = (
+    booking.guest?._id ||
+    booking.guest ||
+    booking.user?._id ||
+    booking.user
+  )?.toString();
+  const hostId = (
+    booking.host?._id ||
+    booking.host ||
+    booking.listing?.host?._id ||
+    booking.listing?.host
+  )?.toString();
+
+  const isOwner = guestId === user._id.toString();
+  const isHost = hostId === user._id.toString();
   const isAdmin = user.role === "admin";
 
   if (!isOwner && !isHost && !isAdmin) {
@@ -71,10 +105,22 @@ const updateBookingStatusService = async (user, bookingId, status) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) throw new Error("Booking not found");
   const listing = await Listing.findById(booking.listing);
-  if (!listing) throw new Error("Listing not found");
 
-  const isOwner = booking.user.toString() === user._id.toString();
-  const isHost = listing.host.toString() === user._id.toString();
+  const guestId = (
+    booking.guest?._id ||
+    booking.guest ||
+    booking.user?._id ||
+    booking.user
+  )?.toString();
+  const hostId = (
+    booking.host?._id ||
+    booking.host ||
+    listing?.host?._id ||
+    listing?.host
+  )?.toString();
+
+  const isOwner = guestId === user._id.toString();
+  const isHost = hostId === user._id.toString();
   const isAdmin = user.role === "admin";
 
   if (!isOwner && !isHost && !isAdmin) {
@@ -91,8 +137,21 @@ const deleteBookingService = async (user, bookingId) => {
   if (!booking) throw new Error("Booking not found");
   const listing = await Listing.findById(booking.listing);
 
-  const isOwner = booking.user.toString() === user._id.toString();
-  const isHost = listing && listing.host.toString() === user._id.toString();
+  const guestId = (
+    booking.guest?._id ||
+    booking.guest ||
+    booking.user?._id ||
+    booking.user
+  )?.toString();
+  const hostId = (
+    booking.host?._id ||
+    booking.host ||
+    listing?.host?._id ||
+    listing?.host
+  )?.toString();
+
+  const isOwner = guestId === user._id.toString();
+  const isHost = hostId === user._id.toString();
   const isAdmin = user.role === "admin";
 
   if (!isOwner && !isHost && !isAdmin) {
